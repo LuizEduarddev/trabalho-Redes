@@ -1,10 +1,8 @@
-string = 'gozei na calca'
+dicionario = {}
 
-string = string.split(' ')
+dicionario.update({'nome': 'luiz'})
 
-print(string[0])
-print(string[1])
-print(string[2])
+print(dicionario)
 
 
 
