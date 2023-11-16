@@ -12,34 +12,52 @@ def defineServidor():
     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     return servidor
 
-def desfragmentaString(string: str):
+def desfragmentaString(clientes, data: str, address):
     try:
-        string = string.split(' ')
+        data = data.split(' ')
     except:
         print('ERR INVALID_MESSAGE_FORMAT')
 
-    if string[0] == 'REG':
-        socketREG(string)
-    elif string[0] == 'UPD':
-        socketUPD(string)
-    elif string[0] == 'LST':
-        socketLST(string)
-    elif string[0] == 'END':
-        socketEND(string)
+    if data[0] == 'REG':
+        socketREG(clientes, data, address)
+    elif data[0] == 'UPD':
+        socketUPD(clientes, data, address)
+    elif data[0] == 'LST':
+        socketLST(clientes, data, address)
+    elif data[0] == 'END':
+        socketEND(clientes, data, address)
     else:
         print('ERR INVALID_MESSAGE_FORMAT')
         return 0
 
-
-def socketREG(string: str):
+def requirementsREG(string: str):
     string = string.split(' ')
+    if len(string) < 4:
+        print('ERR INVALID_MESSAGE_FORMAT')
+        exit()
+    else:
+        port = int(string[2])
+        if port > 65535:
+            print('ERR PORT_INVALID_NUM')
+            exit()
+        else:
+            data = string[4]
+            data.split(',')
+            tamanho = len(data)
+            print(f'OK <{tamanho}>_REGISTERED_FILES')
+            return string
 
-def updateClientes(clientes :dict, data, address):
+
+def socketREG(clientes:dict, data: str, address):
+    data = requirementsREG(data)
+    updateClientes(clientes, data[3], address, data[2], data[1])
+
+def updateClientes(clientes :dict, data, address, port, password):
     atualizaNumero = 0
     atualizaNumero += int(clientes['usuarios'])
-    clientes.update({'usuarios': atualizaNumero})
-    chave = f'cliente{atualizaNumero}'
-    clientes.update({chave, {'data':data, 'address': address}})
+    clientes.update({'users_count': atualizaNumero})
+    chave = f'client{atualizaNumero}'
+    clientes.update({chave, {'data':data, 'address': address, 'port': port, 'password': password}})
     return clientes
 
 def main():
@@ -57,10 +75,7 @@ def main():
         data, address = servidor.recv(1024)
 
         print(f'Connection ready with IP: {address}')
-
-        clientes = updateClientes(clientes, data, address)
-        
-        desfragmentaString()
+        desfragmentaString(clientes, data, address)
 
         
     

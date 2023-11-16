@@ -1,8 +1,3 @@
-dicionario = {}
-
-dicionario.update({'nome': 'luiz'})
-
-print(dicionario)
-
-
+string = 'jorge, marcos, mateus, junior'
+print(string.split(','))
 
