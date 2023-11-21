@@ -47,6 +47,36 @@ def requirementsREG(string: str):
             print(f'OK <{tamanho}>_REGISTERED_FILES')
             return string
 
+def requirementsUPD(string: str):
+    string = string.split(' ')
+    if len(string) < 4:
+        print('ERR INVALID_MESSAGE_FORMAT')
+        exit()
+    else:
+        port = int(string[2])
+        if port > 65535:
+            print('ERR PORT_INVALID_NUM')
+            exit()
+        else:
+            data = string[4]
+            data.split(',')
+            return string
+
+def searchInDB(clientes:dict, data: str, password):
+    list_clientes = clientes['password']
+    for senha in list_clientes:
+        if senha == password:
+            return 0
+    return -1
+        
+def socketUPD(clientes:dict, data: str, address):
+    data = requirementsUPD(data)
+    password = data[1]
+    teste = searchInDB(clientes, data, password)
+    
+    if teste == 0:
+
+
 
 def socketREG(clientes:dict, data: str, address):
     data = requirementsREG(data)
