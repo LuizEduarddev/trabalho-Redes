@@ -1,3 +1,4 @@
-string = 'jorge, marcos, mateus, junior'
-print(string.split(','))
+data = 'joao, luiz, augusto'
 
+data = data.split(',')
+print(data)
