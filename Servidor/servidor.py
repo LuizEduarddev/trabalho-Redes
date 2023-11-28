@@ -48,8 +48,8 @@ def socketEND(clientes:dict, password: str, port: str, servidor: socket.socket):
 
 def excludItens(clientes:dict, lista: list, servidor: socket.socket):
     for client in lista:
+        servidor.send(('OK CLIENT_FINISHED').encode('UTF-8'))
         del clientes[client]
-    servidor.send(('OK CLIENT_FINISHED').encode('UTF-8'))
 
 def verificaTemp(string, number, tamanho):
     temp = number + 1
