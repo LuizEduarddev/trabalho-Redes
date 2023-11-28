@@ -9,7 +9,7 @@ def retornaPorta():
     return PORTA
 
 def defineServidor():
-    servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    servidor = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return servidor
 
 def desfragmentaString(clientes, data: str, address, servidor: socket.socket):
