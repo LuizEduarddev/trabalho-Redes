@@ -29,9 +29,14 @@ def define_client():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return client_socket
 
+def get_port_server():
+    return 54494
+
 def controle_udp():
-    PORT = find_port()
+    PORT = get_port_server()
     HOST = get_host()
+    server_address = (HOST, PORT)
+    message = ''
     try:
         CLIENT = define_client()
     except:
@@ -39,7 +44,13 @@ def controle_udp():
         print('TRY AGAIN LATER')
         exit()
 
-    mesage = input(str('SEND A MESSAGE TO SERVER: '))
+    print('IF YOU WANT TO CLOSE THE CONNECTION TYPE "finish".')
+
+    while message != 'finish':
+        message = input(str(b'SEND A MESSAGE TO SERVER: '))
+        CLIENT.sento(message, server_address)
+    
+    CLIENT.close()
     
 
 
@@ -78,9 +89,12 @@ def main():
     start_new_thread(inicia_controle_tcp, ())
     start_new_thread(inicia_controle_udp, ())
 
-    while True:
-        time.sleep(60)
-        print('Cliente em execucao')
+    choice = input('FOR CONNECT TO THE SERVER, TYPE server OR ELSE TYPE client')
+
+    if choice == 'server':
+        controle_udp()
+    elif choice == 'client':
+        pass
 
 
 if __name__ == '__main__':
