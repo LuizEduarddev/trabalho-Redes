@@ -17,6 +17,7 @@ def desfragmentaString(clientes, data: str, address, servidor: socket.socket):
         data = data.split(' ')
     except:
         servidor.send('ERR INVALID_MESSAGE_FORMAT')
+        exit()
 
     if data[0] == 'REG':
         socketREG(clientes, data, address, servidor)
@@ -33,6 +34,22 @@ def desfragmentaString(clientes, data: str, address, servidor: socket.socket):
     else:
         servidor.send('ERR INVALID_MESSAGE_FORMAT')
         return 0
+
+def socketEND(clientes:dict, password: str, port: str, servidor: socket.socket):
+    client_exclud_list = []
+    for client, info in clientes.items():
+        if info['password'] == password and info['port'] == port:
+            client_exclud_list.append(client)
+
+    if len(client_exclud_list) <= 0:s
+        servidor.send('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD')
+    else:
+        excludItens(client_exclud_list)
+
+def excludItens(clientes:dict, lista: list, servidor: socket.socket):
+    for client in lista:
+        del clientes[client]
+    servidor.send('OK CLIENT_FINISHED')
 
 def verificaTemp(string, number, tamanho):
     temp = number + 1
@@ -60,11 +77,11 @@ def requirementsREG(string: str, servidor: socket.socket):
         exit()
     else:
         port = int(string[2])
-        if port > 65535:
+        if port > 65535 or port < 0:
             servidor.send('ERR PORT_INVALID_NUM')
             exit()
         else:
-            data = string[4]
+            data = string[3]
             data.split(';')
             tamanho = len(data)
             servidor.send(f'OK <{tamanho}>_REGISTERED_FILES')
@@ -77,29 +94,30 @@ def requirementsUPD(string: str, servidor: socket.socket):
         exit()
     else:
         port = int(string[2])
-        if port > 65535:
+        if port > 65535 or port < 1:
             servidor.send('ERR PORT_INVALID_NUM')
             exit()
         else:
-            data = string[3]
-            data.split(',')
             return string
 
-def searchInDB(clientes:dict, data:str, password: str, servidor: socket.socket):
+def searchInDB(clientes:dict, data:str, port:str, password: str, servidor: socket.socket):
     for temp, info in clientes.items():
         if "password" in info and info["password"] == password:
             info["data"] = data
-            data = data.split(';')
-            servidor.send(f'OK <{len(data)}>_REGISTERED_FILES')
+            info['password'] = password
+            info['port'] = port
+            tamanho = data.split(';')
+            servidor.send(f'OK <{len(tamanho)}>_REGISTERED_FILES')
             return 
-        
     servidor.send('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD')
     return 
         
 def socketUPD(clientes:dict, data:str, address, servidor: socket.socket):
     data = requirementsUPD(data)
     password = data[1]
-    searchInDB(clientes, data, password, servidor)
+    dados = data[3]
+    port = data[2]
+    searchInDB(clientes, dados, port, password, servidor)
     
 def socketREG(clientes:dict, data: str, address, servidor: socket.socket):
     data = requirementsREG(data, servidor)
@@ -131,10 +149,8 @@ def main():
         data  = servidor.recv(1024) 
 
         print(f'Connection ready with IP: {address}')
-        desfragmentaString(clientes, data, address, servidor)
+        desfragmentaString(clientes, data, address, conn)
 
-        
-    
     c1 = clientes[0]
     c1_addr, c1_port = c1
 
