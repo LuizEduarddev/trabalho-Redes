@@ -16,7 +16,7 @@ def desfragmentaString(clientes, data: str, address, servidor: socket.socket):
     try:
         data = data.split(' ')
     except:
-        servidor.send(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'))
+        servidor.sendto(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'), address)
         exit()
 
     if data[0] == 'REG':
@@ -29,26 +29,42 @@ def desfragmentaString(clientes, data: str, address, servidor: socket.socket):
         socketLST(clientes, data, address, servidor)
 
     elif data[0] == 'END':
-        socketEND(clientes, data, address, servidor)
+        socketEND(clientes, servidor, address, data)
 
     else:
-        servidor.send(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'))
+        servidor.sendto(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'), address)
         return 0
 
-def socketEND(clientes:dict, password: str, port: str, servidor: socket.socket):
+def requirementsEND(servidor: socket.socket, data: str, address):
+    string = data.split(' ')
+    if len(string) < 3:
+        servidor.sendto(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'), address)
+        exit()
+    else:
+        port = int(string[2])
+        if port > 65535 or port < 0:
+            servidor.sendto(('ERR PORT_INVALID_NUM').encode('UTF-8'), address)
+            exit()
+        else:
+            return string
+
+def socketEND(clientes:dict, servidor: socket.socket, address, data: str):
+    data = requirementsEND(servidor, data, address) # Dudu do futuro, nao precisa mudar a logica do return, ta certo
+    password = data[1]
+    port = data[2]
     client_exclud_list = []
     for client, info in clientes.items():
         if info['password'] == password and info['port'] == port:
             client_exclud_list.append(client)
 
     if len(client_exclud_list) <= 0:
-        servidor.send(('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD').encode('UTF-8'))
+        servidor.sendto(('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD').encode('UTF-8'), address)
     else:
-        excludItens(client_exclud_list)
+        excludItens(clientes, client_exclud_list, servidor, address)
 
-def excludItens(clientes:dict, lista: list, servidor: socket.socket):
+def excludItens(clientes:dict, lista: list, servidor: socket.socket, address):
     for client in lista:
-        servidor.send(('OK CLIENT_FINISHED').encode('UTF-8'))
+        servidor.sendto(('OK CLIENT_FINISHED').encode('UTF-8'), address)
         del clientes[client]
 
 def verificaTemp(string, number, tamanho):
@@ -58,7 +74,7 @@ def verificaTemp(string, number, tamanho):
     else:
         string = string + ','
 
-def socketLST(clientes: dict, servidor: socket.socket):
+def socketLST(clientes: dict, servidor: socket.socket, address):
     number = int(0)
     string = str()
     tamanho = len(clientes)
@@ -68,59 +84,59 @@ def socketLST(clientes: dict, servidor: socket.socket):
         string = string + f'{info["data"]},ip{info["users_count"]}:{info["address"]}'
         verificaTemp(string, number, tamanho)
     
-    servidor.send(string.encode('UTF-8'))
+    servidor.sendto(string.encode('UTF-8'), address)
 
-def requirementsREG(string: str, servidor: socket.socket):
+def requirementsREG(string: str, servidor: socket.socket, address):
     string = string.split(' ')
     if len(string) < 4:
-        servidor.send(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'))
+        servidor.sendto(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'), address)
         exit()
     else:
         port = int(string[2])
         if port > 65535 or port < 0:
-            servidor.send(('ERR PORT_INVALID_NUM').encode('UTF-8'))
+            servidor.sendto(('ERR PORT_INVALID_NUM').encode('UTF-8'), address)
             exit()
         else:
             data = string[3]
             data.split(';')
             tamanho = len(data)
-            servidor.send((f'OK <{tamanho}>_REGISTERED_FILES').encode('UTF-8'))
+            servidor.sendto((f'OK <{tamanho}>_REGISTERED_FILES').encode('UTF-8'), address)
             return string
 
-def requirementsUPD(string: str, servidor: socket.socket):
+def requirementsUPD(string: str, servidor: socket.socket, address):
     string = string.split(' ')
     if len(string) < 4:
-        servidor.send(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'))
+        servidor.sendto(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'), address)
         exit()
     else:
         port = int(string[2])
         if port > 65535 or port < 1:
-            servidor.send(('ERR PORT_INVALID_NUM').encode('UTF-8'))
+            servidor.sendto(('ERR PORT_INVALID_NUM').encode('UTF-8'), address)
             exit()
         else:
             return string
 
-def searchInDB(clientes:dict, data:str, port:str, password: str, servidor: socket.socket):
+def searchInDB(clientes:dict, data:str, port:str, password: str, servidor: socket.socket, address):
     for temp, info in clientes.items():
         if "password" in info and info["password"] == password:
             info["data"] = data
             info['password'] = password
             info['port'] = port
             tamanho = data.split(';')
-            servidor.send((f'OK <{len(tamanho)}>_REGISTERED_FILES').encode('UTF-8'))
+            servidor.sendto((f'OK <{len(tamanho)}>_REGISTERED_FILES').encode('UTF-8'), address)
             return 
-    servidor.send(('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD').encode('UTF-8'))
+    servidor.sendto(('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD').encode('UTF-8'), address)
     return 
         
 def socketUPD(clientes:dict, data:str, address, servidor: socket.socket):
-    data = requirementsUPD(data)
+    data = requirementsUPD(data, servidor, address)
     password = data[1]
     dados = data[3]
     port = data[2]
-    searchInDB(clientes, dados, port, password, servidor)
+    searchInDB(clientes, dados, port, password, servidor, address)
     
 def socketREG(clientes:dict, data: str, address, servidor: socket.socket):
-    data = requirementsREG(data, servidor)
+    data = requirementsREG(data, servidor, address)
     clientes = updateClientes(clientes, data[3], address, data[2], data[1], servidor)
 
 def updateClientes(clientes :dict, data, address, port, password, servidor: socket.socket):
@@ -131,7 +147,7 @@ def updateClientes(clientes :dict, data, address, port, password, servidor: sock
     clientes.update({chave:{'data':data, 'address': address, 'port': port, 'password': password}})
     register = data[3]
     register = register.split(';')
-    servidor.send((f'OK <{len(register)}>_REGISTERED_FILES').encode('UTF-8'))
+    servidor.sendto((f'OK <{len(register)}>_REGISTERED_FILES').encode('UTF-8'), address)
     return clientes
 
 def main():
