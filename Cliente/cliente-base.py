@@ -11,14 +11,36 @@ def configurar_ambiente():
 
 
 def descobre_porta_disponivel():
-    return 31337
+    return 54494
 
+def find_port():
+
+    temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    temp_socket.bind(('localhost', 0)) 
+    _, port = temp_socket.getsockname()
+    temp_socket.close()
+
+    return port
+
+def get_host():
+    return 'localhost'
+
+def define_client():
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return client_socket
 
 def controle_udp():
-    # Codigo do servico UDP
-    while True:
-        print('Controle UDP funcionando')
-        time.sleep(5)
+    PORT = find_port()
+    HOST = get_host()
+    try:
+        CLIENT = define_client()
+    except:
+        print('ERROR: THERE WAS A FAILURE TRYING TO CONNECT TO SERVER...')
+        print('TRY AGAIN LATER')
+        exit()
+
+    mesage = input(str('SEND A MESSAGE TO SERVER: '))
+    
 
 
 def servico_tcp(client):

@@ -162,7 +162,7 @@ def main():
     conn, address = servidor.accept() 
     
     while True:
-        data  = servidor.recv(1024) 
+        data  = servidor.recv(1024).decode('UTF-8')
 
         print(f'Connection ready with IP: {address}')
         desfragmentaString(clientes, data, address, conn)
