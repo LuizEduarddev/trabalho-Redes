@@ -1,7 +1,7 @@
 import socket
 
 def retornaHost():
-    HOST = 'localhost'
+    HOST = '127.0.0.1'
     return HOST
 
 def retornaPorta():
@@ -150,23 +150,18 @@ def updateClientes(clientes :dict, data, address, port, password, servidor: sock
     servidor.sendto((f'OK <{len(register)}>_REGISTERED_FILES').encode('UTF-8'), address)
     return clientes
 
-def main():
-    clientes = {'usuarios': 0}
-    HOST = retornaHost()
-    PORTA = retornaPorta()
-    servidor = defineServidor()
 
-    servidor.bind((HOST, PORTA))
-    servidor.listen()
-    print('Aguardando conexao....')
-    conn, address = servidor.accept() 
-    
-    while True:
-        data  = servidor.recv(1024).decode('UTF-8')
+clientes = {'usuarios': 0}
+HOST = retornaHost()
+PORTA = retornaPorta()
+servidor = defineServidor()
 
-        print(f'Connection ready with IP: {address}')
-        desfragmentaString(clientes, data, address, conn)
-        
-if __name__ == '__main__':
-    main()
+servidor.bind((HOST, PORTA))
+print('Waiting for some information.........')
+
+while True:
+    data, address  = servidor.recv(1024).decode('UTF-8')
+
+    print(f'Data get from: {address}')
+    desfragmentaString(clientes, data, address, servidor)
 

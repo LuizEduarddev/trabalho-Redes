@@ -43,13 +43,19 @@ def controle_udp():
         print('ERROR: THERE WAS A FAILURE TRYING TO CONNECT TO SERVER...')
         print('TRY AGAIN LATER')
         exit()
-
-    print('IF YOU WANT TO CLOSE THE CONNECTION TYPE "finish".')
-
+        
     while message != 'finish':
         message = input(str(b'SEND A MESSAGE TO SERVER: '))
-        CLIENT.sento(message, server_address)
-    
+        CLIENT.sendto(message, server_address)
+
+        try:
+            data, server = CLIENT.recvfrom(1024)
+            data = str(data)
+            data = data.encode().decode()
+            print(data)
+        except socket.timeout:
+            print('REQUESTED TIME OUT')
+
     CLIENT.close()
     
 
@@ -86,15 +92,13 @@ def main():
 
     configurar_ambiente()
 
-    start_new_thread(inicia_controle_tcp, ())
-    start_new_thread(inicia_controle_udp, ())
 
-    choice = input('FOR CONNECT TO THE SERVER, TYPE server OR ELSE TYPE client')
+    choice = input('FOR CONNECT TO THE SERVER, TYPE server OR ELSE TYPE client\n: ')
 
     if choice == 'server':
-        controle_udp()
+        start_new_thread(inicia_controle_udp, ())
     elif choice == 'client':
-        pass
+        start_new_thread(inicia_controle_tcp, ())
 
 
 if __name__ == '__main__':
