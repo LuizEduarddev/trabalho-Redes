@@ -1,105 +1,173 @@
-#!/usr/bin/python
-
-import time
 import socket
-from _thread import *
+import threading
+import os
+import random
+import string
+import hashlib
 
-porta_tcp = None
-
-def configurar_ambiente():
-    pass
-
-
-def descobre_porta_disponivel():
-    return 54494
-
-def find_port():
-
+def find_available_tcp_port():
     temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    temp_socket.bind(('localhost', 0)) 
+    temp_socket.bind(('localhost', 0))
     _, port = temp_socket.getsockname()
     temp_socket.close()
-
     return port
 
-def get_host():
-    return 'localhost'
-
-def define_client():
+def register_to_server(server_ip, tcp_port, shared_directory, password):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return client_socket
+    server_address = (server_ip, 54494)
 
-def get_port_server():
-    return 54494
+    registration_message = f"REG {password} {tcp_port} {shared_directory}"
+    client_socket.sendto(registration_message.encode(), server_address)
+    response, _ = client_socket.recvfrom(1024)
+    print(response.decode())
+    client_socket.close()
 
-def controle_udp():
-    PORT = get_port_server()
-    HOST = get_host()
-    server_address = (HOST, PORT)
-    message = ''
-    try:
-        CLIENT = define_client()
-    except:
-        print('ERROR: THERE WAS A FAILURE TRYING TO CONNECT TO SERVER...')
-        print('TRY AGAIN LATER')
-        exit()
-        
-    while message != 'finish':
-        message = input(str(b'SEND A MESSAGE TO SERVER: '))
-        CLIENT.sendto(message, server_address)
-
-        try:
-            data, server = CLIENT.recvfrom(1024)
-            data = str(data)
-            data = data.encode().decode()
-            print(data)
-        except socket.timeout:
-            print('REQUESTED TIME OUT')
-
-    CLIENT.close()
-    
-
-
-def servico_tcp(client):
-    # Codigo do servico TCP
-    print('Nova conexao TCP')
-    client.send(b'OI')
-    client.close()
-
-
-def controle_tcp():
-    global porta_tcp
-    _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    _socket.bind(('', porta_tcp))
-    _socket.listen(4096)
+def tcp_server(client_socket, shared_directory):
     while True:
-        client, addr = _socket.accept()
-        start_new_thread(servico_tcp, (client, ))
+        command = client_socket.recv(1024).decode()
+        if command == "LIST":
+            files = os.listdir(shared_directory)
+            files_list = "\n".join(files)
+            client_socket.send(files_list.encode())
+        elif command.startswith("DOWNLOAD"):
+            _, filename = command.split()
+            filepath = os.path.join(shared_directory, filename)
+            try:
+                with open(filepath, 'rb') as file:
+                    file_data = file.read()
+                    client_socket.send(file_data)
+            except FileNotFoundError:
+                client_socket.send(b"File not found.")
+        elif command == "DISCONNECT":
+            break
+    client_socket.close()
+
+def handle_client(server_socket, shared_directory):
+    client, _ = server_socket.accept()
+    threading.Thread(target=tcp_server, args=(client, shared_directory)).start()
+
+def generate_random_password():
+    
+    characters = string.ascii_letters + string.digits
+    password = ''.join(random.choice(characters) for _ in range(8))
+
+    return password
+
+def listar_arquivos_e_calcular_hash(diretorio):
+    try:
+        lista_arquivos = os.listdir(diretorio)
+
+        if not lista_arquivos:
+            print("O diretório está vazio.")
+            return None
+
+        print("Arquivos disponíveis:")
+        for i, arquivo in enumerate(lista_arquivos, start=1):
+            print(f"{i}. {arquivo}")
+
+        escolha = int(input("Escolha o número do arquivo: "))
+        if 1 <= escolha <= len(lista_arquivos):
+            arquivo_escolhido = lista_arquivos[escolha - 1]
+
+            caminho_arquivo = os.path.abspath(os.path.join(diretorio, arquivo_escolhido))
+
+            hash_do_arquivo = calcular_hash_do_arquivo(caminho_arquivo)
+
+            return f"{hash_do_arquivo},{arquivo_escolhido}"
+        else:
+            print("Escolha inválida.")
+    except Exception as e:
+        print(f"Ocorreu um erro: {e}")
 
 
-def inicia_controle_tcp():
-    controle_tcp()
+def calcular_hash_do_arquivo(caminho_arquivo, algoritmo='sha256', buffer_size=65536):
+    try:
+        hash_obj = hashlib.new(algoritmo)
 
+        with open(caminho_arquivo, 'rb') as arquivo:
+            for bloco in iter(lambda: arquivo.read(buffer_size), b''):
+                hash_obj.update(bloco)
 
-def inicia_controle_udp():
-    controle_udp()
-
+        return hash_obj.hexdigest()
+    except Exception as e:
+        print(f"Erro ao calcular hash: {e}")
+        return None
 
 def main():
-    global porta_tcp
-    porta_tcp = descobre_porta_disponivel()
+    print('\n\nWARNING: O DIRETORIO PRECISA SER ENVIADO ENTRE ASPAS\nEX: "/meu/diretorio"\n\n')
+    if len(os.sys.argv) != 3:
+        print("Usage: python3 cliente.py <IP> <DIRETORIO>")
+        return
 
-    configurar_ambiente()
+    server_ip = os.sys.argv[1]
+    shared_directory = os.sys.argv[2]
+    print(shared_directory)
+    tcp_port = find_available_tcp_port()
+    password = generate_random_password()
 
+    directory = listar_arquivos_e_calcular_hash(shared_directory)
+    register_to_server(server_ip, tcp_port, directory, password)
 
-    choice = input('FOR CONNECT TO THE SERVER, TYPE server OR ELSE TYPE client\n: ')
+    tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_server_socket.bind(('localhost', tcp_port))
+    tcp_server_socket.listen(5)
 
-    if choice == 'server':
-        start_new_thread(inicia_controle_udp, ())
-    elif choice == 'client':
-        start_new_thread(inicia_controle_tcp, ())
+    print(f"Cliente registrado com sucesso na porta TCP {tcp_port}")
 
+    threading.Thread(target=handle_client, args=(tcp_server_socket, shared_directory)).start()
 
-if __name__ == '__main__':
+    while True:
+        print("Comandos disponíveis:\n")
+        print("1. LIST - Listar arquivos disponíveis")
+        print("2. DOWNLOAD <filename> - Baixar um arquivo")
+        print("3. UPD - Atualizar registro existente")
+        print("4. DISCONNECT - Desconectar do servidor")
+        command = int(input("\n\nOBS: DIGITE O NUMERO DA OPCAO\nDigite o comando desejado: "))
+
+        if command == 1:
+            command = "LST"
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            server_address = (server_ip, 54494)
+            client_socket.sendto(command.encode(), server_address)
+            response, _ = client_socket.recvfrom(1024)
+            print("Arquivos disponíveis:")
+            print(response.decode())
+            client_socket.close()
+
+        elif command == 2:
+            _, filename = command.split()
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(('localhost', tcp_port))
+            client_socket.send(command.encode())
+            file_data = client_socket.recv(1024)
+            if file_data == b"File not found.":
+                print("Arquivo não encontrado.")
+            else:
+                with open(os.path.join(shared_directory, filename), 'wb') as file:
+                    file.write(file_data)
+                print(f"Arquivo '{filename}' baixado com sucesso.")
+            client_socket.close()
+
+        elif command == 3:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(('localhost', tcp_port))
+            files = input("Por favor, insira o diretorio: ")
+            command = f'UPD {password} {tcp_port} {files}'
+            client_socket.send(command.encode())
+            file_data = client_socket.recv(1024)
+            print(file_data)
+            client_socket.close()
+
+        elif command == 4:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            server_address = (server_ip, 54494) 
+            disconnect_message = f'END {password} {server_ip}'
+            client_socket.sendto(disconnect_message.encode(), server_address)
+            file_data = client_socket.recv(1024)
+            print(file_data)
+            break
+        else:
+            print("Comando inválido. Tente novamente.")
+
+if __name__ == "__main__":
     main()

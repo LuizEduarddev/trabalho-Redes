@@ -12,23 +12,23 @@ def defineServidor():
     servidor = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return servidor
 
-def desfragmentaString(clientes, data: str, address, servidor: socket.socket):
+def desfragmentaString(clientes: dict, data: str, address, servidor: socket.socket):
     try:
-        data = data.split(' ')
+        teste = data.split(' ')
     except:
         servidor.sendto(('ERR INVALID_MESSAGE_FORMAT').encode('UTF-8'), address)
         exit()
 
-    if data[0] == 'REG':
+    if teste[0] == 'REG':
         socketREG(clientes, data, address, servidor)
 
-    elif data[0] == 'UPD':
+    elif teste[0] == 'UPD':
         socketUPD(clientes, data, address, servidor)
 
-    elif data[0] == 'LST':
-        socketLST(clientes, data, address, servidor)
+    elif teste[0] == 'LST':
+        socketLST(clientes, servidor, address)
 
-    elif data[0] == 'END':
+    elif teste[0] == 'END':
         socketEND(clientes, servidor, address, data)
 
     else:
@@ -72,7 +72,8 @@ def verificaTemp(string, number, tamanho):
     if temp >= tamanho:
         return 
     else:
-        string = string + ','
+       string = string + ','
+       return string
 
 def socketLST(clientes: dict, servidor: socket.socket, address):
     number = int(0)
@@ -82,7 +83,7 @@ def socketLST(clientes: dict, servidor: socket.socket, address):
     for chave, info in clientes.items():
         number += 1
         string = string + f'{info["data"]},ip{info["users_count"]}:{info["address"]}'
-        verificaTemp(string, number, tamanho)
+        string = verificaTemp(string, number, tamanho)
     
     servidor.sendto(string.encode('UTF-8'), address)
 
@@ -100,7 +101,7 @@ def requirementsREG(string: str, servidor: socket.socket, address):
             data = string[3]
             data.split(';')
             tamanho = len(data)
-            servidor.sendto((f'OK <{tamanho}>_REGISTERED_FILES').encode('UTF-8'), address)
+            servidor.sendto((f'OK <1>_REGISTERED_FILES').encode('UTF-8'), address)
             return string
 
 def requirementsUPD(string: str, servidor: socket.socket, address):
@@ -123,7 +124,7 @@ def searchInDB(clientes:dict, data:str, port:str, password: str, servidor: socke
             info['password'] = password
             info['port'] = port
             tamanho = data.split(';')
-            servidor.sendto((f'OK <{len(tamanho)}>_REGISTERED_FILES').encode('UTF-8'), address)
+            servidor.sendto((f'OK <1>_REGISTERED_FILES').encode('UTF-8'), address)
             return 
     servidor.sendto(('ERR IP_REGISTERED_WITH_DIFFERENT_PASSWORD').encode('UTF-8'), address)
     return 
@@ -146,8 +147,12 @@ def updateClientes(clientes :dict, data, address, port, password, servidor: sock
     chave = f'client{atualizaNumero}'
     clientes.update({chave:{'data':data, 'address': address, 'port': port, 'password': password}})
     register = data[3]
-    register = register.split(';')
-    servidor.sendto((f'OK <{len(register)}>_REGISTERED_FILES').encode('UTF-8'), address)
+    if ';' in register:
+        register = register.split(';')
+        servidor.sendto((f'OK <{len(register)}>_REGISTERED_FILES').encode('UTF-8'), address)
+    else:
+        number = 1
+        servidor.sendto((f'OK <{(number)}>_REGISTERED_FILES').encode('UTF-8'), address)
     return clientes
 
 
@@ -160,8 +165,9 @@ servidor.bind((HOST, PORTA))
 print('Waiting for some information.........')
 
 while True:
-    data, address  = servidor.recv(1024).decode('UTF-8')
+    data, address  = servidor.recvfrom(1024)
+    data = data.decode('UTF-8')
 
-    print(f'Data get from: {address}')
+    print(f'Data |{data}| get from: {address}')
     desfragmentaString(clientes, data, address, servidor)
 
