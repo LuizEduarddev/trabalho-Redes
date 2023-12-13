@@ -23,7 +23,6 @@ def handle_upd(message, clients, client_address):
 
     for client_info in clients.values():
         if client_info["ip"] == ip and client_info["password"] == password:
-            client_info["port"] = port
             client_info["files"] = files
 
             num_files = len(files.split(";"))
